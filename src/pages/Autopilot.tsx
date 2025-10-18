@@ -63,7 +63,7 @@ export default function Autopilot() {
               { name: "Savings Sweep", status: "active", description: "Moves excess funds to savings weekly" },
               { name: "Subscription Monitoring", status: "active", description: "Alerts on price changes and renewals" },
             ].map((automation) => (
-              <div key={automation.name} className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
+              <div key={automation.name} className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.08]">
                 <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -85,7 +85,7 @@ export default function Autopilot() {
               { action: "Switch to annual Adobe plan", savings: "$108/year", confidence: "Medium" },
               { action: "Increase emergency fund allocation", amount: "+$50/mo", confidence: "High" },
             ].map((item, i) => (
-              <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10">
+              <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08]">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h4 className="font-medium mb-1">{item.action}</h4>
@@ -102,10 +102,10 @@ export default function Autopilot() {
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" className="flex-1 gradient-primary">
+                  <Button size="sm" className="flex-1 gradient-primary text-primary-foreground focus-ring">
                     Approve
                   </Button>
-                  <Button size="sm" variant="ghost" className="flex-1">
+                  <Button size="sm" variant="ghost" className="flex-1 focus-ring">
                     Decline
                   </Button>
                 </div>
@@ -115,9 +115,9 @@ export default function Autopilot() {
         </GlassCard>
       </div>
 
-      <GlassCard className="bg-destructive/10 border-destructive/20">
+      <GlassCard className="bg-destructive/5 border-destructive/20">
         <div className="flex items-center gap-4">
-          <div className="p-4 rounded-xl bg-destructive/20">
+          <div className="p-4 rounded-lg bg-destructive/10">
             <Shield className="h-8 w-8 text-destructive" />
           </div>
           <div className="flex-1">
@@ -126,7 +126,7 @@ export default function Autopilot() {
               Temporarily disable all automated financial decisions
             </p>
           </div>
-          <Button variant="destructive">Pause</Button>
+          <Button variant="destructive" className="focus-ring">Pause</Button>
         </div>
       </GlassCard>
     </div>

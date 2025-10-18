@@ -87,11 +87,11 @@ export default function Dashboard() {
               <div className="w-16 h-1 rounded-full bg-primary/40 animate-pulse" style={{ animationDelay: "0.4s" }}></div>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Great job this month! Your spending is down 12% and you're saving more than ever. 
-              Keep it up and you'll hit your Paris trip goal 2 months early.
+              Your spending is down 12% this month and your savings rate has increased. 
+              At this pace, you'll reach your Paris trip goal 2 months ahead of schedule.
             </p>
-            <button className="w-full py-2 px-4 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary text-sm font-medium transition-colors border border-primary/30">
-              🎧 Listen to Summary
+            <button className="w-full py-2 px-4 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-sm font-medium transition-colors border border-primary/20 focus-ring">
+              Listen to Summary
             </button>
           </div>
         </GlassCard>
@@ -131,7 +131,7 @@ export default function Dashboard() {
               { name: "Spotify Family", date: "Oct 30", amount: "$16.99" },
               { name: "Adobe Creative", date: "Nov 1", amount: "$54.99" },
             ].map((sub) => (
-              <div key={sub.name} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+              <div key={sub.name} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.08] hover:bg-white/[0.04] transition-colors">
                 <div>
                   <p className="text-sm font-medium">{sub.name}</p>
                   <p className="text-xs text-muted-foreground">{sub.date}</p>

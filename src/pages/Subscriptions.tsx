@@ -3,60 +3,10 @@ import { GlassCard } from "@/components/GlassCard";
 import { CreditCard, AlertCircle, Calendar, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-const subscriptions = [
-  {
-    id: 1,
-    name: "Netflix Premium",
-    amount: 19.99,
-    nextRenewal: "Oct 28, 2025",
-    status: "active",
-    category: "Entertainment",
-  },
-  {
-    id: 2,
-    name: "Spotify Family",
-    amount: 16.99,
-    nextRenewal: "Oct 30, 2025",
-    status: "active",
-    category: "Music",
-  },
-  {
-    id: 3,
-    name: "Adobe Creative Cloud",
-    amount: 54.99,
-    nextRenewal: "Nov 1, 2025",
-    status: "active",
-    category: "Software",
-  },
-  {
-    id: 4,
-    name: "Amazon Prime",
-    amount: 14.99,
-    nextRenewal: "Nov 5, 2025",
-    status: "trial",
-    category: "Shopping",
-  },
-  {
-    id: 5,
-    name: "ChatGPT Plus",
-    amount: 20.0,
-    nextRenewal: "Nov 8, 2025",
-    status: "active",
-    category: "AI Tools",
-  },
-  {
-    id: 6,
-    name: "Notion Pro",
-    amount: 10.0,
-    nextRenewal: "Nov 12, 2025",
-    status: "active",
-    category: "Productivity",
-  },
-];
+import { useFinancialData } from "@/hooks/useFinancialData";
 
 export default function Subscriptions() {
-  const totalMonthly = subscriptions.reduce((sum, sub) => sum + sub.amount, 0);
+  const { subscriptions, totalSubscriptionCost, activeSubscriptionsCount } = useFinancialData();
 
   return (
     <div className="animate-fade-in-up">
@@ -70,7 +20,7 @@ export default function Subscriptions() {
             </div>
             <h3 className="text-sm font-medium text-muted-foreground">Total Monthly</h3>
           </div>
-          <p className="text-3xl font-bold text-foreground">${totalMonthly.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-foreground">${totalSubscriptionCost.toFixed(2)}</p>
         </GlassCard>
 
         <GlassCard hover>
@@ -80,7 +30,7 @@ export default function Subscriptions() {
             </div>
             <h3 className="text-sm font-medium text-muted-foreground">Active</h3>
           </div>
-          <p className="text-3xl font-bold text-foreground">{subscriptions.filter(s => s.status === "active").length}</p>
+          <p className="text-3xl font-bold text-foreground">{activeSubscriptionsCount}</p>
         </GlassCard>
 
         <GlassCard hover>
@@ -99,17 +49,17 @@ export default function Subscriptions() {
           {subscriptions.map((sub) => (
             <div
               key={sub.id}
-              className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group"
+              className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08] hover:bg-white/[0.04] transition-colors group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                   <CreditCard className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-foreground">{sub.name}</h3>
                     {sub.status === "trial" && (
-                      <Badge variant="outline" className="text-xs border-blue-500/50 text-blue-400">
+                      <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-400 bg-blue-500/10">
                         Trial
                       </Badge>
                     )}
@@ -127,7 +77,7 @@ export default function Subscriptions() {
 
               <div className="flex items-center gap-4">
                 <p className="text-xl font-bold text-primary">${sub.amount}</p>
-                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity focus-ring">
                   Cancel
                 </Button>
               </div>

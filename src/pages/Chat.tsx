@@ -17,7 +17,7 @@ export default function Chat() {
     {
       id: "1",
       role: "assistant",
-      content: "Hi Alex! I'm your MoneyTalks advisor. How can I help you with your finances today?",
+      content: "Hello. I'm your MoneyTalks advisor. How can I assist you with your finances today?",
       timestamp: new Date(),
     },
   ]);
@@ -59,23 +59,20 @@ export default function Chat() {
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[70%] rounded-2xl px-4 py-3 ${
+                className={`max-w-[70%] rounded-xl px-4 py-3 ${
                   message.role === "user"
-                    ? "bg-primary/20 border border-primary/30 text-foreground"
-                    : "bg-white/5 border border-white/10 text-foreground"
+                    ? "bg-primary/10 border border-primary/20 text-foreground"
+                    : "bg-white/[0.03] border border-white/[0.08] text-foreground"
                 }`}
               >
                 {message.role === "assistant" && (
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full gradient-primary flex items-center justify-center text-xs font-bold">
-                      MT
-                    </div>
-                    <span className="text-xs text-muted-foreground">AI Advisor</span>
+                    <span className="text-xs font-medium text-primary">AI Advisor</span>
                   </div>
                 )}
                 <p className="text-sm leading-relaxed">{message.content}</p>
                 {message.role === "assistant" && (
-                  <button className="mt-2 text-xs text-primary hover:text-primary/80 flex items-center gap-1">
+                  <button className="mt-2 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors focus-ring">
                     <Volume2 className="h-3 w-3" />
                     Listen
                   </button>
@@ -86,7 +83,7 @@ export default function Chat() {
         </div>
 
         <div className="flex gap-2">
-          <Button size="icon" variant="ghost" className="glass-card-hover shrink-0">
+          <Button size="icon" variant="ghost" className="glass-card-hover shrink-0 focus-ring">
             <Mic className="h-5 w-5" />
           </Button>
           <Input
@@ -94,9 +91,9 @@ export default function Chat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
             placeholder="Ask about your spending, savings, or goals..."
-            className="flex-1 glass-card border-white/10 focus:border-primary/50"
+            className="flex-1 glass-card border-white/[0.08] focus:border-primary/50 focus-ring"
           />
-          <Button onClick={handleSend} className="gradient-primary shrink-0 hover:opacity-90">
+          <Button onClick={handleSend} className="gradient-primary text-primary-foreground shrink-0 hover:opacity-90 focus-ring">
             <Send className="h-5 w-5" />
           </Button>
         </div>

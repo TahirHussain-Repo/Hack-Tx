@@ -8,63 +8,67 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Matte Glass Fintech Theme */
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* Premium Fintech Matte Glass Theme */
+    /* Deep navy backgrounds */
+    --background: 222 47% 6%;
+    --foreground: 210 20% 98%;
 
-    --card: 220 50% 15%;
-    --card-foreground: 210 40% 98%;
+    /* Slate card backgrounds */
+    --card: 215 25% 15%;
+    --card-foreground: 210 20% 98%;
     
-    --glass: 220 50% 15% / 0.7;
-    --glass-border: 210 40% 98% / 0.1;
-    --glass-highlight: 210 40% 98% / 0.05;
+    /* Matte glass treatment - translucent white on dark */
+    --glass: 0 0% 100% / 0.03;
+    --glass-border: 0 0% 100% / 0.08;
+    --glass-highlight: 0 0% 100% / 0.02;
 
-    --popover: 220 50% 12%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 215 25% 12%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 160 70% 45%;
-    --primary-foreground: 220 50% 10%;
+    /* Emerald accent */
+    --primary: 158 64% 52%;
+    --primary-foreground: 222 47% 11%;
     
-    --secondary: 215 15% 50%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 215 15% 40%;
+    --secondary-foreground: 210 20% 98%;
 
-    --muted: 215 20% 25%;
-    --muted-foreground: 215 15% 70%;
+    --muted: 215 20% 20%;
+    --muted-foreground: 215 15% 60%;
 
-    --accent: 45 90% 60%;
-    --accent-foreground: 220 50% 10%;
+    /* Soft gold accent */
+    --accent: 45 93% 47%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 70% 50%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 210 20% 98%;
 
-    --border: 210 40% 98% / 0.1;
-    --input: 210 40% 98% / 0.1;
-    --ring: 160 70% 45%;
+    --border: 0 0% 100% / 0.08;
+    --input: 0 0% 100% / 0.08;
+    --ring: 158 64% 52%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
     
-    /* Glassmorphism effects */
-    --blur-sm: 8px;
-    --blur-md: 16px;
-    --blur-lg: 24px;
+    /* Matte glass blur */
+    --blur-sm: 12px;
+    --blur-md: 20px;
+    --blur-lg: 32px;
     
-    /* Shadows */
-    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    --shadow-glow: 0 0 40px rgba(16, 185, 129, 0.2);
+    /* Subtle shadows - no glow */
+    --shadow-glass: 0 4px 24px 0 rgba(0, 0, 0, 0.25);
+    --shadow-subtle: 0 2px 8px 0 rgba(0, 0, 0, 0.15);
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(160 70% 45%) 0%, hsl(160 80% 55%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(45 90% 60%) 0%, hsl(40 95% 70%) 100%);
-    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+    /* Professional gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(158 64% 52%) 0%, hsl(158 64% 42%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(45 93% 47%) 0%, hsl(45 93% 37%) 100%);
 
-    --sidebar-background: 220 50% 12%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 160 70% 45%;
-    --sidebar-primary-foreground: 220 50% 10%;
-    --sidebar-accent: 220 50% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 210 40% 98% / 0.1;
-    --sidebar-ring: 160 70% 45%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 158 64% 52%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 215 25% 15%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 158 64% 52%;
   }
 }
 
@@ -75,50 +79,51 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    background: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(220 50% 8%) 100%);
+    background: linear-gradient(135deg, hsl(222 47% 6%) 0%, hsl(215 25% 8%) 100%);
   }
 }
 
 @layer components {
+  /* Matte Glass Card - translucent white on dark with subtle depth */
   .glass-card {
-    @apply rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-xl;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    @apply rounded-xl backdrop-blur-xl bg-white/[0.03] border border-white/[0.08];
+    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.25);
   }
   
   .glass-card-hover {
-    @apply glass-card transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:shadow-2xl;
+    @apply glass-card transition-all duration-200 hover:bg-white/[0.05] hover:border-white/[0.12];
   }
   
+  /* Matte Panel - for larger sections */
+  .matte-panel {
+    @apply rounded-xl backdrop-blur-2xl bg-white/[0.02] border border-white/[0.06];
+    box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Professional gradients - subtle, no glow */
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(160 70% 45%) 0%, hsl(160 80% 55%) 100%);
+    background: linear-gradient(135deg, hsl(158 64% 52%) 0%, hsl(158 64% 42%) 100%);
   }
   
   .gradient-accent {
-    background: linear-gradient(135deg, hsl(45 90% 60%) 0%, hsl(40 95% 70%) 100%);
+    background: linear-gradient(135deg, hsl(45 93% 47%) 0%, hsl(45 93% 37%) 100%);
   }
   
   .text-gradient-primary {
     @apply bg-clip-text text-transparent;
-    background: linear-gradient(135deg, hsl(160 70% 45%) 0%, hsl(160 80% 55%) 100%);
+    background: linear-gradient(135deg, hsl(158 64% 52%) 0%, hsl(158 64% 42%) 100%);
   }
   
-  .glow-primary {
-    box-shadow: 0 0 40px rgba(16, 185, 129, 0.3);
+  /* Refined focus states for accessibility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
   
-  .avatar-pulse {
-    animation: pulse-gentle 3s ease-in-out infinite;
-  }
-  
-  @keyframes pulse-gentle {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.9; transform: scale(1.02); }
-  }
-  
+  /* Gentle transitions */
   @keyframes fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(16px);
     }
     to {
       opacity: 1;
@@ -127,6 +132,33 @@ All colors MUST be HSL.
   }
   
   .animate-fade-in-up {
-    animation: fade-in-up 0.5s ease-out;
+    animation: fade-in-up 0.4s ease-out;
+  }
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+  
+  /* Drawer animations */
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
   }
 }

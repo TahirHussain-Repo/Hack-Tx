@@ -1,16 +1,10 @@
 import { Header } from "@/components/Header";
 import { GlassCard } from "@/components/GlassCard";
 import { TrendingUp, TrendingDown, PieChart, BarChart3 } from "lucide-react";
+import { useFinancialData } from "@/hooks/useFinancialData";
 
 export default function Insights() {
-  const categories = [
-    { name: "Housing", amount: 1200, percentage: 37, color: "bg-primary" },
-    { name: "Food", amount: 450, percentage: 14, color: "bg-accent" },
-    { name: "Transport", amount: 280, percentage: 9, color: "bg-blue-500" },
-    { name: "Entertainment", amount: 320, percentage: 10, color: "bg-purple-500" },
-    { name: "Shopping", amount: 380, percentage: 12, color: "bg-pink-500" },
-    { name: "Other", amount: 617, percentage: 18, color: "bg-secondary" },
-  ];
+  const { spendingCategories } = useFinancialData();
 
   return (
     <div className="animate-fade-in-up">
@@ -23,7 +17,7 @@ export default function Insights() {
             Spending by Category
           </h3>
           <div className="space-y-4">
-            {categories.map((cat) => (
+            {spendingCategories.map((cat) => (
               <div key={cat.name}>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium">{cat.name}</span>
@@ -32,9 +26,9 @@ export default function Insights() {
                     <span className="text-xs text-muted-foreground ml-2">({cat.percentage}%)</span>
                   </div>
                 </div>
-                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-white/[0.05] rounded-full overflow-hidden">
                   <div
-                    className={`h-full ${cat.color} transition-all duration-500`}
+                    className={`h-full ${cat.color} transition-all duration-300`}
                     style={{ width: `${cat.percentage}%` }}
                   />
                 </div>
@@ -51,7 +45,7 @@ export default function Insights() {
           <div className="h-64 flex items-end justify-between gap-2">
             {[65, 72, 58, 80, 75, 85, 70, 87].map((value, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                <div className="w-full bg-gradient-to-t from-primary to-primary/50 rounded-t-lg transition-all duration-500 hover:from-primary/80"
+                <div className="w-full bg-gradient-to-t from-primary to-primary/40 rounded-t-lg transition-all duration-200 hover:from-primary/80"
                   style={{ height: `${value}%` }}
                 />
                 <span className="text-xs text-muted-foreground">

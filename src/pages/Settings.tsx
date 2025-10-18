@@ -18,19 +18,19 @@ export default function Settings() {
             <h3 className="text-lg font-semibold">Account</h3>
           </div>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
               <div>
                 <p className="font-medium">Alex Thompson</p>
                 <p className="text-sm text-muted-foreground">alex.thompson@email.com</p>
               </div>
-              <Button variant="ghost" size="sm">Edit</Button>
+              <Button variant="ghost" size="sm" className="focus-ring">Edit</Button>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
               <div>
                 <p className="font-medium">Connected Banks</p>
                 <p className="text-sm text-muted-foreground">2 accounts connected</p>
               </div>
-              <Button variant="ghost" size="sm">Manage</Button>
+              <Button variant="ghost" size="sm" className="focus-ring">Manage</Button>
             </div>
           </div>
         </GlassCard>
@@ -43,19 +43,19 @@ export default function Settings() {
             <h3 className="text-lg font-semibold">Personalization</h3>
           </div>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
               <div>
                 <p className="font-medium">AI Voice Tone</p>
-                <p className="text-sm text-muted-foreground">Professional & Friendly</p>
+                <p className="text-sm text-muted-foreground">Professional</p>
               </div>
-              <Button variant="ghost" size="sm">Change</Button>
+              <Button variant="ghost" size="sm" className="focus-ring">Change</Button>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
               <div>
                 <p className="font-medium">Currency</p>
                 <p className="text-sm text-muted-foreground">USD ($)</p>
               </div>
-              <Button variant="ghost" size="sm">Change</Button>
+              <Button variant="ghost" size="sm" className="focus-ring">Change</Button>
             </div>
           </div>
         </GlassCard>
@@ -74,7 +74,7 @@ export default function Settings() {
               { label: "Unusual spending", description: "Alert on transactions above $100" },
               { label: "Weekly summaries", description: "Email recap every Sunday" },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+              <div key={item.label} className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
                 <div>
                   <p className="font-medium">{item.label}</p>
                   <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -93,14 +93,14 @@ export default function Settings() {
             <h3 className="text-lg font-semibold">Privacy & Security</h3>
           </div>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
               <div>
                 <p className="font-medium">Two-factor authentication</p>
                 <p className="text-sm text-muted-foreground">Enabled</p>
               </div>
-              <Button variant="ghost" size="sm">Configure</Button>
+              <Button variant="ghost" size="sm" className="focus-ring">Configure</Button>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
               <div>
                 <p className="font-medium">Data sharing</p>
                 <p className="text-sm text-muted-foreground">AI training opt-out enabled</p>
@@ -117,7 +117,7 @@ export default function Settings() {
             </div>
             <h3 className="text-lg font-semibold">Plan</h3>
           </div>
-          <div className="p-4 rounded-lg bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30">
+          <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="font-bold text-lg">MoneyTalks Pro</p>
@@ -125,7 +125,7 @@ export default function Settings() {
               </div>
               <p className="text-2xl font-bold text-primary">$12<span className="text-sm">/mo</span></p>
             </div>
-            <Button className="w-full gradient-primary">Upgrade Plan</Button>
+            <Button className="w-full gradient-primary text-primary-foreground focus-ring">Upgrade Plan</Button>
           </div>
         </GlassCard>
       </div>

@@ -11,18 +11,18 @@ export default function Emergency() {
         subtitle="Financial recovery and crisis management"
       />
 
-      <GlassCard className="mb-8 bg-blue-500/10 border-blue-500/20">
+      <GlassCard className="mb-8 bg-blue-500/5 border-blue-500/20">
         <div className="flex items-start gap-4">
-          <div className="p-3 rounded-xl bg-blue-500/20">
+          <div className="p-3 rounded-lg bg-blue-500/10">
             <AlertCircle className="h-6 w-6 text-blue-400" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-2 text-blue-400">Emergency Mode is Currently Off</h3>
+            <h3 className="text-lg font-semibold mb-2">Emergency Mode</h3>
             <p className="text-sm text-muted-foreground mb-4">
               When activated, I'll create a customized recovery plan to help you navigate financial difficulties. 
               This includes expense reduction strategies, payment prioritization, and resource recommendations.
             </p>
-            <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white focus-ring">
               Activate Emergency Mode
             </Button>
           </div>
@@ -89,7 +89,7 @@ export default function Emergency() {
               description: "Builds a step-by-step plan to return to financial stability",
             },
           ].map((item, i) => (
-            <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
+            <div key={i} className="flex items-start gap-4 p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
                 <span className="text-sm font-bold text-primary">{i + 1}</span>
               </div>
