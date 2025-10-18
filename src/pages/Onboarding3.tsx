@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Target, TrendingUp, Wallet, Plus, X } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
+import { useFinancialData } from "@/contexts/FinancialDataContext";
 
 const API_KEY = "87ad7bec4c2410f7f823e0f11da33b53";
 const CUSTOMER_ID = "68f400d39683f20dd519ea94";
@@ -22,6 +23,7 @@ interface Goal {
 const Onboarding3 = () => {
   const navigate = useNavigate();
   const { completeOnboarding } = useOnboarding();
+  const { setGoals: saveGoals, setFinancialPlan } = useFinancialData();
   const [loading, setLoading] = useState(true);
   const [savings, setSavings] = useState(20);
   const [investments, setInvestments] = useState(10);
@@ -79,8 +81,19 @@ const Onboarding3 = () => {
   const livingExpensesAmount = Math.round((monthlyIncome * livingExpenses) / 100);
 
   const handleComplete = () => {
+    // Save goals and financial plan to context
+    saveGoals(goals);
+    setFinancialPlan({
+      savingsPercentage: savings,
+      investmentsPercentage: investments,
+      livingExpensesPercentage: livingExpenses,
+      monthlyIncome,
+      yearlyIncome: monthlyIncome * 12,
+    });
+    
     // Mark onboarding as complete
     completeOnboarding();
+    
     // Navigate to dashboard
     navigate("/");
   };

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/GlassCard";
 import { Loader2, DollarSign, FileText, CreditCard } from "lucide-react";
+import { useFinancialData } from "@/contexts/FinancialDataContext";
 
 const API_KEY = "87ad7bec4c2410f7f823e0f11da33b53";
 const CUSTOMER_ID = "68f400d39683f20dd519ea94";
@@ -20,6 +21,7 @@ interface Bill {
 
 const Onboarding2 = () => {
   const navigate = useNavigate();
+  const { setAccounts, setBills: saveContextBills, updateData } = useFinancialData();
   const [loading, setLoading] = useState(true);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [yearlyIncome, setYearlyIncome] = useState(0);
@@ -27,6 +29,7 @@ const Onboarding2 = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [subscriptions, setSubscriptions] = useState<{ name: string; amount: number }[]>([]);
   const [confirmed, setConfirmed] = useState(false);
+  const [fetchedAccounts, setFetchedAccounts] = useState<any[]>([]);
 
   useEffect(() => {
     fetchFinancialData();
@@ -41,6 +44,7 @@ const Onboarding2 = () => {
         `http://api.nessieisreal.com/customers/${CUSTOMER_ID}/accounts?key=${API_KEY}`
       );
       const accounts = await accountsResponse.json();
+      setFetchedAccounts(accounts); // Save accounts for later
 
       // Fetch deposits from all accounts
       let allDeposits: Deposit[] = [];
@@ -256,7 +260,22 @@ const Onboarding2 = () => {
 
           {/* CTA */}
           <Button 
-            onClick={() => navigate("/onboarding/3")}
+            onClick={() => {
+              // Save data to context before navigating
+              setAccounts(fetchedAccounts);
+              saveContextBills(bills);
+              updateData({
+                transactions: recentDeposits.map((d, i) => ({
+                  _id: `deposit_${i}`,
+                  type: 'deposit',
+                  amount: d.amount,
+                  transaction_date: d.transaction_date,
+                  description: 'Paycheck deposit',
+                  category: 'income'
+                }))
+              });
+              navigate("/onboarding/3");
+            }}
             disabled={!confirmed}
             className="w-full py-6 text-lg font-semibold gradient-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >

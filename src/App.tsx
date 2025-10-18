@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DrawerProvider, useDrawers } from "./contexts/DrawerContext";
 import { OnboardingProvider, useOnboarding } from "./contexts/OnboardingContext";
+import { FinancialDataProvider } from "./contexts/FinancialDataContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
 import { NotificationsDrawer } from "./components/NotificationsDrawer";
@@ -131,9 +132,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <OnboardingProvider>
-            <DrawerProvider>
-              <AppContent />
-            </DrawerProvider>
+            <FinancialDataProvider>
+              <DrawerProvider>
+                <AppContent />
+              </DrawerProvider>
+            </FinancialDataProvider>
           </OnboardingProvider>
         </BrowserRouter>
       </TooltipProvider>
