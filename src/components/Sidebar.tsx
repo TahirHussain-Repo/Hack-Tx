@@ -12,6 +12,7 @@ const navigation = [
   { name: "Autopilot", href: "/autopilot", icon: Zap },
   { name: "Emergency", href: "/emergency", icon: AlertCircle },
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Nessie Demo", href: "/nessie", icon: Zap },
 ];
 
 export const Sidebar = () => {
