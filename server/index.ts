@@ -172,7 +172,17 @@ async function callGemini(messages: { role: string; content: string }[], context
     contents.push({ role: "user", parts: [{ text: `Goals: ${context.goals}` }] });
   }
 
-  const doCall = async (model: string) => {
+  type GeminiResponse = {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{
+          text?: string;
+        }>;
+      };
+    }>;
+  };
+
+  const doCall = async (model: string): Promise<GeminiResponse> => {
     const response = await fetch(`${GEMINI_BASE_URL}/${model}:generateContent?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: {
@@ -186,10 +196,10 @@ async function callGemini(messages: { role: string; content: string }[], context
       throw new Error(errorText || response.statusText);
     }
 
-    return response.json() as Promise<any>;
+    return (await response.json()) as GeminiResponse;
   };
 
-  let json: any;
+  let json: GeminiResponse;
   try {
     json = await doCall(GEMINI_MODEL_NAME);
   } catch (err) {
@@ -197,7 +207,11 @@ async function callGemini(messages: { role: string; content: string }[], context
     json = await doCall(GEMINI_FALLBACK_MODEL);
   }
 
-  const text = json?.candidates?.[0]?.content?.parts?.map((part: { text: string }) => part.text).join("\n").trim();
+  const text = json?.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text ?? "")
+    .filter(Boolean)
+    .join("\n")
+    .trim();
 
   if (!text) {
     throw new Error("Empty response from Gemini");
