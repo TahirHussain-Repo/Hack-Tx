@@ -1,10 +1,23 @@
 import { Header } from "@/components/Header";
 import { GlassCard } from "@/components/GlassCard";
-import { User, Bell, Shield, Palette, CreditCard } from "lucide-react";
+import { User, Bell, Shield, Palette, CreditCard, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Settings() {
+  const navigate = useNavigate();
+
+  const handleResetOnboarding = () => {
+    localStorage.removeItem('onboarding_completed');
+    toast.success('Onboarding reset! Redirecting...');
+    setTimeout(() => {
+      navigate('/onboarding/1');
+      window.location.reload();
+    }, 1000);
+  };
+
   return (
     <div className="animate-fade-in-up">
       <Header title="Settings" subtitle="Customize your MoneyTalks experience" />
@@ -126,6 +139,29 @@ export default function Settings() {
               <p className="text-2xl font-bold text-primary">$12<span className="text-sm">/mo</span></p>
             </div>
             <Button className="w-full gradient-primary text-primary-foreground focus-ring">Upgrade Plan</Button>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="border-destructive/20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 rounded-xl bg-destructive/20">
+              <RefreshCw className="h-5 w-5 text-destructive" />
+            </div>
+            <h3 className="text-lg font-semibold">Development</h3>
+          </div>
+          <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.08]">
+            <div className="mb-3">
+              <p className="font-medium">Reset Onboarding</p>
+              <p className="text-sm text-muted-foreground">Clear onboarding progress and restart the setup flow</p>
+            </div>
+            <Button 
+              onClick={handleResetOnboarding}
+              variant="destructive" 
+              className="w-full focus-ring"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reset Onboarding
+            </Button>
           </div>
         </GlassCard>
       </div>
