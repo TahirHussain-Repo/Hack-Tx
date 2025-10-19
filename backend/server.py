@@ -7,12 +7,36 @@ import requests
 from datetime import datetime, timedelta
 import json
 from io import BytesIO
+import time
+import threading
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# Explicit CORS headers for local dev (8080/5173)
+@app.after_request
+def add_cors_headers(response):
+    try:
+        origin = request.headers.get('Origin', '')
+        allowed_origins = {
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:8080',
+            'http://127.0.0.1:8080',
+        }
+        if origin in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+        else:
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Vary'] = 'Origin'
+        response.headers['Access-Control-Allow-Credentials'] = 'false'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    finally:
+        return response
 
 # Configure APIs
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -26,6 +50,24 @@ model = genai.GenerativeModel('gemini-pro')
 
 # In-memory session storage (use Redis in production)
 sessions = {}
+
+# Constants for screen dimensions
+SCREEN_WIDTH = 1440
+SCREEN_HEIGHT = 900
+
+# Strict import for Computer Use (required)
+from google import genai as genai_client
+from google.genai import types
+from google.genai.types import Content, Part
+from playwright.sync_api import sync_playwright
+
+# Validate Computer Use presence at startup
+if not hasattr(types, "ComputerUse") or not hasattr(types, "Environment"):
+    raise ImportError(
+        "google-genai does not include ComputerUse. Upgrade the SDK: "
+        "pip install --upgrade google-genai && python -m playwright install chromium"
+    )
+print("✓ Computer Use dependencies loaded successfully")
 
 # ============================================================================
 # NESSIE API HELPERS
@@ -193,6 +235,243 @@ def text_to_speech(text, voice_id="21m00Tcm4TlvDq8ikWAM"):
     except Exception as e:
         print(f"ElevenLabs error: {e}")
         return None
+
+# ============================================================================
+# COMPUTER USE HELPERS
+# ============================================================================
+
+def denormalize_x(x: int, screen_width: int) -> int:
+    """Convert normalized x coordinate (0-1000) to actual pixel coordinate."""
+    return int(x / 1000 * screen_width)
+
+def denormalize_y(y: int, screen_height: int) -> int:
+    """Convert normalized y coordinate (0-1000) to actual pixel coordinate."""
+    return int(y / 1000 * screen_height)
+
+def execute_function_calls(candidate, page, screen_width, screen_height):
+    """Execute Computer Use function calls using Playwright"""
+    results = []
+    function_calls = []
+    
+    for part in candidate.content.parts:
+        if part.function_call:
+            function_calls.append(part.function_call)
+
+    for function_call in function_calls:
+        action_result = {}
+        fname = function_call.name
+        args = function_call.args
+        print(f"  -> Executing: {fname}")
+
+        try:
+            if fname == "open_web_browser":
+                pass  # Already open
+            elif fname == "click_at":
+                actual_x = denormalize_x(args["x"], screen_width)
+                actual_y = denormalize_y(args["y"], screen_height)
+                page.mouse.click(actual_x, actual_y)
+            elif fname == "type_text_at":
+                actual_x = denormalize_x(args["x"], screen_width)
+                actual_y = denormalize_y(args["y"], screen_height)
+                text = args["text"]
+                press_enter = args.get("press_enter", False)
+
+                page.mouse.click(actual_x, actual_y)
+                page.keyboard.press("Control+A")
+                page.keyboard.press("Backspace")
+                page.keyboard.type(text)
+                if press_enter:
+                    page.keyboard.press("Enter")
+            elif fname == "scroll_document":
+                direction = args.get("direction", "down")
+                if direction == "down":
+                    page.mouse.wheel(0, 500)
+                elif direction == "up":
+                    page.mouse.wheel(0, -500)
+            elif fname == "navigate":
+                url = args.get("url")
+                page.goto(url)
+            elif fname == "wait_5_seconds":
+                time.sleep(5)
+            elif fname == "go_back":
+                page.go_back()
+            else:
+                print(f"Warning: Unimplemented function {fname}")
+
+            # Wait for potential navigations/renders
+            page.wait_for_load_state(timeout=5000)
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"Error executing {fname}: {e}")
+            action_result = {"error": str(e)}
+
+        results.append((fname, action_result))
+
+    return results
+
+def get_function_responses(page, results):
+    """Capture environment state after action execution"""
+    screenshot_bytes = page.screenshot(type="png")
+    current_url = page.url
+    function_responses = []
+    
+    for name, result in results:
+        response_data = {"url": current_url}
+        response_data.update(result)
+        function_responses.append(
+            types.FunctionResponse(
+                name=name,
+                response=response_data,
+                parts=[types.FunctionResponsePart(
+                        inline_data=types.FunctionResponseBlob(
+                            mime_type="image/png",
+                            data=screenshot_bytes))
+                ]
+            )
+        )
+    return function_responses
+
+def search_cars_with_computer_use(budget_max: float):
+    """
+    Use Gemini Computer Use API to search for Toyota cars within budget.
+    Returns a list of car recommendations.
+    """
+    if not computer_use_available:
+        return {
+            "error": "Computer Use dependencies not installed. Run: pip install google-genai playwright && playwright install chromium",
+            "recommendations": [],
+            "success": False
+        }
+    
+    print(f"Searching for Toyota cars with budget: ${budget_max}")
+    
+    playwright_instance = None
+    browser = None
+    
+    try:
+        # Initialize the Computer Use client
+        computer_client = genai_client.Client(api_key=GEMINI_API_KEY)
+        
+        # Setup Playwright
+        print("Starting Playwright...")
+        playwright_instance = sync_playwright().start()
+        browser = playwright_instance.chromium.launch(headless=True)
+        context = browser.new_context(viewport={"width": SCREEN_WIDTH, "height": SCREEN_HEIGHT})
+        page = context.new_page()
+        
+        # Go to initial page
+        print("Navigating to Google...")
+        page.goto("https://www.google.com", wait_until="networkidle", timeout=30000)
+        time.sleep(2)
+        
+        # Configure the model (Computer Use required, no fallback)
+        config = types.GenerateContentConfig(
+            tools=[types.Tool(computer_use=types.ComputerUse(
+                environment=types.Environment.ENVIRONMENT_BROWSER
+            ))],
+        )
+        
+        # Initial screenshot
+        initial_screenshot = page.screenshot(type="png")
+        
+        # Create search prompt
+        USER_PROMPT = f"""Search on Google Shopping for used or new Toyota cars priced under ${budget_max:.0f}. 
+Find 4-5 options with good ratings. For each car, extract:
+- Make and Model
+- Year
+- Price
+- Condition (New/Used)
+- Brief description or key features
+
+Format the results as a clear, structured list."""
+        
+        print(f"Goal: {USER_PROMPT}")
+        
+        contents = [
+            Content(role="user", parts=[
+                Part(text=USER_PROMPT),
+                Part.from_bytes(data=initial_screenshot, mime_type='image/png')
+            ])
+        ]
+        
+        # Agent Loop
+        turn_limit = 15
+        final_text = ""
+        
+        for i in range(turn_limit):
+            print(f"\n--- Turn {i+1} ---")
+            print("Thinking...")
+            
+            try:
+                response = computer_client.models.generate_content(
+                    model='gemini-2.5-computer-use-preview-10-2025',
+                    contents=contents,
+                    config=config,
+                )
+                
+                candidate = response.candidates[0]
+                contents.append(candidate.content)
+                
+                has_function_calls = any(part.function_call for part in candidate.content.parts)
+                
+                if not has_function_calls:
+                    text_response = " ".join([part.text for part in candidate.content.parts if part.text])
+                    print("Agent finished:", text_response)
+                    final_text = text_response
+                    break
+                
+                print("Executing actions...")
+                results = execute_function_calls(candidate, page, SCREEN_WIDTH, SCREEN_HEIGHT)
+                
+                print("Capturing state...")
+                function_responses = get_function_responses(page, results)
+                
+                contents.append(
+                    Content(role="user", parts=[Part(function_response=fr) for fr in function_responses])
+                )
+            except Exception as turn_error:
+                print(f"Error in turn {i+1}: {turn_error}")
+                # Try to continue with next turn
+                if i == turn_limit - 1:
+                    raise
+        
+        # Parse the final response
+        cars = parse_car_recommendations(final_text)
+        return cars
+        
+    except Exception as e:
+        print(f"Computer Use error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "recommendations": [],
+            "success": False
+        }
+    finally:
+        # Cleanup
+        print("Cleaning up browser...")
+        try:
+            if browser:
+                browser.close()
+        except:
+            pass
+        try:
+            if playwright_instance:
+                playwright_instance.stop()
+        except:
+            pass
+
+def parse_car_recommendations(text: str):
+    """Parse the AI response to extract structured car data"""
+    # This is a simple parser - in production you'd want more robust parsing
+    # For now, return the raw text formatted nicely
+    return {
+        "raw_text": text,
+        "recommendations": [],
+        "success": True
+    }
 
 # ============================================================================
 # API ROUTES
@@ -375,6 +654,49 @@ def end_session():
         })
     
     return jsonify({"error": "Session not found"}), 404
+
+@app.route('/api/advisor/car-recommendations', methods=['POST', 'OPTIONS'])
+def get_car_recommendations():
+    """Get Toyota car recommendations using Computer Use API"""
+    if request.method == 'OPTIONS':
+        # Preflight response
+        resp = jsonify({"ok": True})
+        resp.status_code = 204
+        return resp
+    data = request.json
+    budget = data.get('budget', 30000)
+    
+    print(f"\n{'='*50}")
+    print(f"Received car recommendation request with budget: ${budget}")
+    print(f"{'='*50}\n")
+    
+    # Run Computer Use (this will take 30-60 seconds)
+    try:
+        result = search_cars_with_computer_use(budget)
+        
+        # Check if there was an error in the result
+        if isinstance(result, dict) and result.get('error'):
+            return jsonify({
+                "success": False,
+                "error": result['error'],
+                "budget": budget
+            }), 500
+        
+        return jsonify({
+            "success": True,
+            "budget": budget,
+            "results": result,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"Error in car recommendations: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Server error: {str(e)}",
+            "budget": budget
+        }), 500
 
 # ============================================================================
 # MAIN

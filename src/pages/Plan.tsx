@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+ 
 
 const COLORS = {
   essentials: 'hsl(215 15% 60%)',
@@ -19,6 +20,8 @@ export default function Plan() {
   const { data } = useFinancialData();
   const { ninetyDayPlan, goals, financialPlan, bills } = data;
   const navigate = useNavigate();
+  
+ 
 
   if (!ninetyDayPlan || !financialPlan) {
     return (
@@ -75,6 +78,8 @@ export default function Plan() {
     { name: 'Goals', value: monthlyGoals, color: COLORS.investments },
     { name: 'Everything Else', value: Math.max(leftoverMoney, 0), color: COLORS.fun },
   ].filter(item => item.value > 0);
+
+  
 
   return (
     <div className="animate-fade-in-up max-w-6xl mx-auto">
@@ -272,6 +277,8 @@ export default function Plan() {
           )}
         </div>
       </GlassCard>
+
+      {/* Removed Car Recommendations from Plan (moved to Goals) */}
 
       {/* Suggestions */}
       <div className="mb-8">

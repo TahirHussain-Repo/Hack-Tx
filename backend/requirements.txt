@@ -2,6 +2,8 @@ flask==3.0.0
 flask-cors==4.0.0
 python-dotenv==1.0.0
 google-generativeai==0.3.2
+google-genai>=0.3.0
 requests==2.31.0
 elevenlabs==0.2.27
+playwright==1.41.0
 
