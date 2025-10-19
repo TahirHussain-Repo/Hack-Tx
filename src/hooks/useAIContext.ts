@@ -63,13 +63,44 @@ export const useAIContext = () => {
    * Get a prompt-ready string for AI models
    */
   const getAIPromptContext = () => {
+    const goalsEntries = getGoalsSummary();
+    const goalsDetails = goalsEntries.length
+      ? goalsEntries
+          .map(
+            (goal) =>
+              `${goal.name}: target $${goal.target.toLocaleString()} by ${new Date(goal.targetDate).toLocaleDateString()} (${goal.progress.toLocaleString()} saved, $${goal.monthlyAllocation.toLocaleString()}/month allocation)`
+          )
+          .join("\n")
+      : "No goals defined.";
+    const planSnapshot = getNinetyDaySnapshot();
+    const planSummary = planSnapshot
+      ? `Created ${new Date(planSnapshot.createdDate).toLocaleDateString()}.
+Total income (90d): $${planSnapshot.totals.totalIncome.toLocaleString()}
+Total savings (90d): $${planSnapshot.totals.totalSavings.toLocaleString()}
+Total investments (90d): $${planSnapshot.totals.totalInvestments.toLocaleString()}
+Total living expenses (90d): $${planSnapshot.totals.totalLivingExpenses.toLocaleString()}
+Total goals (90d): $${planSnapshot.totals.totalGoals.toLocaleString()}
+Plan months: ${planSnapshot.months
+        .map(
+          (month) =>
+            `${month.name}: savings $${month.totals.savings.toLocaleString()}, investments $${month.totals.investments.toLocaleString()}, living $${month.totals.livingExpenses.toLocaleString()}, goals $${month.totals.goals.toLocaleString()}`
+        )
+        .join(" | ")}`
+      : "No plan on file.";
+
     return `
 You are MoneyTalks, a personal financial AI advisor. Here is the user's current financial situation:
 
-${getFullContext()}
+${getFinancialSummary()}
+
+Goals Detail:
+${goalsDetails}
+
+90-Day Plan Summary:
+${planSummary}
 
 Key Insights:
-${getInsights().map((insight, i) => `${i + 1}. ${insight}`).join('\n')}
+${getInsights().map((insight, i) => `${i + 1}. ${insight}`).join("\n")}
 
 When responding:
 - Be conversational and supportive
@@ -101,12 +132,60 @@ When responding:
     };
   };
 
+  const getPercentages = () => {
+    const { financialPlan } = data;
+    return {
+      savings: financialPlan?.savingsPercentage ?? 0,
+      investments: financialPlan?.investmentsPercentage ?? 0,
+      living: financialPlan?.livingExpensesPercentage ?? 0,
+    };
+  };
+
+  const getIncome = () => {
+    const { financialPlan } = data;
+    return {
+      monthly: financialPlan?.monthlyIncome ?? 0,
+      yearly: financialPlan?.yearlyIncome ?? 0,
+    };
+  };
+
+  const getGoalsSummary = () =>
+    data.goals
+      .map((goal) => ({
+        id: goal.id,
+        name: goal.name,
+        target: goal.amount,
+        targetDate: goal.targetDate,
+        monthlyAllocation: goal.monthlyAllocation,
+        progress: goal.currentAmount ?? 0,
+      }))
+      .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+
+  const getNinetyDaySnapshot = () => {
+    const { ninetyDayPlan } = data;
+    if (!ninetyDayPlan) return null;
+
+    return {
+      createdDate: ninetyDayPlan.createdDate,
+      totals: ninetyDayPlan.overallTotals,
+      months: ninetyDayPlan.months.map((month) => ({
+        month: month.month,
+        name: month.monthName,
+        totals: month.monthTotals,
+      })),
+    };
+  };
+
   return {
     data,
     getFullContext,
     getInsights,
     getAIPromptContext,
     getQuickStats,
+    getGoalsSummary,
+    getPercentages,
+    getIncome,
+    getNinetyDaySnapshot,
   };
 };
 

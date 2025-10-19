@@ -100,6 +100,7 @@ interface FinancialDataContextType {
   setTransactions: (transactions: Transaction[]) => void;
   setFinancialPlan: (plan: FinancialPlan) => void;
   setNinetyDayPlan: (plan: NinetyDayPlan) => void;
+  adjustFinancialPlan: (updates: Partial<FinancialPlan>) => FinancialPlan;
   updateData: (updates: Partial<FinancialData>) => void;
   clearAllData: () => void;
   getFinancialSummary: () => string;
@@ -116,6 +117,97 @@ const defaultData: FinancialData = {
 };
 
 const FinancialDataContext = createContext<FinancialDataContextType | undefined>(undefined);
+
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const cloneGoalAllocations = (
+  allocations: NinetyDayPlan["months"][number]["paychecks"][number]["goalAllocations"],
+): NinetyDayPlan["months"][number]["paychecks"][number]["goalAllocations"] =>
+  allocations.map((allocation) => ({ ...allocation }));
+
+const buildNinetyDayPlan = (plan: FinancialPlan, goals: Goal[]): NinetyDayPlan => {
+  const perPaycheck = plan.monthlyIncome / 2;
+  const savingsPerPaycheck = Math.round((perPaycheck * plan.savingsPercentage) / 100);
+  const investmentsPerPaycheck = Math.round((perPaycheck * plan.investmentsPercentage) / 100);
+  const livingExpensesPerPaycheck = Math.round((perPaycheck * plan.livingExpensesPercentage) / 100);
+
+  const goalTotalsPerMonth = goals.reduce((sum, goal) => sum + goal.monthlyAllocation, 0);
+  const goalAllocationsPerPaycheck = goals.map((goal) => ({
+    goalId: goal.id,
+    goalName: goal.name,
+    amount: Math.round(goal.monthlyAllocation / 2),
+  }));
+
+  const today = new Date();
+  let overallSavings = 0;
+  let overallInvestments = 0;
+  let overallLivingExpenses = 0;
+  let overallGoals = 0;
+
+  const months: NinetyDayPlan["months"] = Array.from({ length: 3 }, (_, monthIdx) => {
+    const monthDate = new Date(today);
+    monthDate.setMonth(today.getMonth() + monthIdx);
+
+    const paychecks: NinetyDayPlan["months"][number]["paychecks"] = [0, 1].map((paycheckIdx) => {
+      const paycheckDate = new Date(monthDate);
+      paycheckDate.setDate(paycheckIdx === 0 ? 1 : 15);
+
+      overallSavings += savingsPerPaycheck;
+      overallInvestments += investmentsPerPaycheck;
+      overallLivingExpenses += livingExpensesPerPaycheck;
+      overallGoals += goalAllocationsPerPaycheck.reduce((sum, allocation) => sum + allocation.amount, 0);
+
+      return {
+        paycheckNumber: monthIdx * 2 + paycheckIdx + 1,
+        date: paycheckDate.toISOString(),
+        income: Math.round(perPaycheck),
+        savings: savingsPerPaycheck,
+        investments: investmentsPerPaycheck,
+        livingExpenses: livingExpensesPerPaycheck,
+        goalAllocations: cloneGoalAllocations(goalAllocationsPerPaycheck),
+      };
+    });
+
+    return {
+      month: monthIdx + 1,
+      monthName: monthNames[monthDate.getMonth()],
+      totalIncome: plan.monthlyIncome,
+      paychecks,
+      monthTotals: {
+        income: plan.monthlyIncome,
+        savings: savingsPerPaycheck * 2,
+        investments: investmentsPerPaycheck * 2,
+        livingExpenses: livingExpensesPerPaycheck * 2,
+        goals: goalTotalsPerMonth,
+      },
+    };
+  });
+
+  return {
+    createdDate: new Date().toISOString(),
+    months,
+    overallTotals: {
+      totalIncome: plan.monthlyIncome * 3,
+      totalSavings: overallSavings,
+      totalInvestments: overallInvestments,
+      totalLivingExpenses: overallLivingExpenses,
+      totalGoals: overallGoals,
+    },
+  };
+};
 
 export const FinancialDataProvider = ({ children }: { children: ReactNode }) => {
   const [data, setData] = useState<FinancialData>(() => {
@@ -137,36 +229,32 @@ export const FinancialDataProvider = ({ children }: { children: ReactNode }) => 
     localStorage.setItem("financial_data", JSON.stringify(data));
   }, [data]);
 
+  const applyGoalsUpdate = (prev: FinancialData, goals: Goal[]) => ({
+    ...prev,
+    goals,
+    ninetyDayPlan: prev.financialPlan ? buildNinetyDayPlan(prev.financialPlan, goals) : prev.ninetyDayPlan,
+    lastUpdated: new Date().toISOString(),
+  });
+
   const setGoals = (goals: Goal[]) => {
-    setData((prev) => ({
-      ...prev,
-      goals,
-      lastUpdated: new Date().toISOString(),
-    }));
+    setData((prev) => applyGoalsUpdate(prev, goals));
   };
 
   const addGoal = (goal: Goal) => {
-    setData((prev) => ({
-      ...prev,
-      goals: [...prev.goals, goal],
-      lastUpdated: new Date().toISOString(),
-    }));
+    setData((prev) => applyGoalsUpdate(prev, [...prev.goals, goal]));
   };
 
   const updateGoal = (id: string, updates: Partial<Goal>) => {
-    setData((prev) => ({
-      ...prev,
-      goals: prev.goals.map((g) => (g.id === id ? { ...g, ...updates } : g)),
-      lastUpdated: new Date().toISOString(),
-    }));
+    setData((prev) =>
+      applyGoalsUpdate(
+        prev,
+        prev.goals.map((g) => (g.id === id ? { ...g, ...updates } : g)),
+      ),
+    );
   };
 
   const removeGoal = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      goals: prev.goals.filter((g) => g.id !== id),
-      lastUpdated: new Date().toISOString(),
-    }));
+    setData((prev) => applyGoalsUpdate(prev, prev.goals.filter((g) => g.id !== id)));
   };
 
   const setAccounts = (accounts: Account[]) => {
@@ -194,11 +282,177 @@ export const FinancialDataProvider = ({ children }: { children: ReactNode }) => 
   };
 
   const setFinancialPlan = (plan: FinancialPlan) => {
-    setData((prev) => ({
-      ...prev,
-      financialPlan: plan,
-      lastUpdated: new Date().toISOString(),
-    }));
+    setData((prev) => {
+      const nextPlan = plan;
+      const shouldGeneratePlan = prev.goals.length > 0;
+
+      return {
+        ...prev,
+        financialPlan: nextPlan,
+        ninetyDayPlan: shouldGeneratePlan ? buildNinetyDayPlan(nextPlan, prev.goals) : prev.ninetyDayPlan,
+        lastUpdated: new Date().toISOString(),
+      };
+    });
+  };
+
+  const normalizePercentages = (plan: FinancialPlan): FinancialPlan => {
+    const percentSum =
+      plan.savingsPercentage + plan.investmentsPercentage + plan.livingExpensesPercentage;
+    if (percentSum === 100) {
+      return plan;
+    }
+
+    if (percentSum === 0) {
+      const equalShare = Math.round((100 / 3) * 100) / 100;
+      return {
+        ...plan,
+        savingsPercentage: equalShare,
+        investmentsPercentage: equalShare,
+        livingExpensesPercentage: 100 - equalShare * 2,
+      };
+    }
+
+    const ratio = 100 / percentSum;
+    const normalize = (value: number) => Math.max(0, Math.round(value * ratio * 100) / 100);
+    const normalizedSavings = normalize(plan.savingsPercentage);
+    const normalizedInvestments = normalize(plan.investmentsPercentage);
+    let normalizedLiving = normalize(plan.livingExpensesPercentage);
+
+    const adjustment = Math.round(
+      (100 - (normalizedSavings + normalizedInvestments + normalizedLiving)) * 100,
+    ) / 100;
+    normalizedLiving += adjustment;
+
+    return {
+      ...plan,
+      savingsPercentage: normalizedSavings,
+      investmentsPercentage: normalizedInvestments,
+      livingExpensesPercentage: normalizedLiving,
+    };
+  };
+
+  const adjustFinancialPlan = (updates: Partial<FinancialPlan>): FinancialPlan => {
+    let nextPlan: FinancialPlan = (data.financialPlan ?? {
+      savingsPercentage: 20,
+      investmentsPercentage: 15,
+      livingExpensesPercentage: 65,
+      monthlyIncome: 0,
+      yearlyIncome: 0,
+    }) as FinancialPlan;
+
+    setData((prev) => {
+      const previousPlan: FinancialPlan =
+        prev.financialPlan || {
+          savingsPercentage: 20,
+          investmentsPercentage: 15,
+          livingExpensesPercentage: 65,
+          monthlyIncome: 0,
+          yearlyIncome: 0,
+        };
+
+      const merged: FinancialPlan = {
+        ...previousPlan,
+        ...updates,
+      };
+
+      const percentFlags = {
+        savings: updates.savingsPercentage !== undefined,
+        investments: updates.investmentsPercentage !== undefined,
+        living: updates.livingExpensesPercentage !== undefined,
+      };
+
+      const percentValues = {
+        savings: merged.savingsPercentage,
+        investments: merged.investmentsPercentage,
+        living: merged.livingExpensesPercentage,
+      };
+
+      const specifiedSum =
+        (percentFlags.savings ? percentValues.savings : 0) +
+        (percentFlags.investments ? percentValues.investments : 0) +
+        (percentFlags.living ? percentValues.living : 0);
+
+      const unspecifiedKeys = Object.entries(percentFlags)
+        .filter(([, flagged]) => !flagged)
+        .map(([key]) => key as "savings" | "investments" | "living");
+
+      if (unspecifiedKeys.length > 0) {
+        const remainder = 100 - specifiedSum;
+        const currentUnspecifiedTotal = unspecifiedKeys.reduce(
+          (sum, key) => sum + percentValues[key],
+          0,
+        );
+
+        if (remainder >= 0) {
+          if (currentUnspecifiedTotal === 0) {
+            const share = remainder / unspecifiedKeys.length;
+            unspecifiedKeys.forEach((key, index) => {
+              const value = index === unspecifiedKeys.length - 1 ? remainder - share * index : share;
+              percentValues[key] = Math.max(0, Math.round(value * 100) / 100);
+            });
+          } else {
+            unspecifiedKeys.forEach((key, index) => {
+              const base = percentValues[key];
+              const proportion = base / currentUnspecifiedTotal || 1 / unspecifiedKeys.length;
+              const value = proportion * remainder;
+              percentValues[key] = Math.max(0, Math.round(value * 100) / 100);
+              if (index === unspecifiedKeys.length - 1) {
+                const assigned =
+                  unspecifiedKeys.slice(0, -1).reduce((sum, k) => sum + percentValues[k], 0) +
+                  percentValues[key];
+                const diff = Math.round((100 - (specifiedSum + assigned)) * 100) / 100;
+                percentValues[key] += diff;
+              }
+            });
+          }
+        } else {
+          const scaling = 100 / (specifiedSum === 0 ? 100 : specifiedSum);
+          if (percentFlags.savings) {
+            percentValues.savings = Math.max(0, Math.round(percentValues.savings * scaling * 100) / 100);
+          }
+          if (percentFlags.investments) {
+            percentValues.investments = Math.max(0, Math.round(percentValues.investments * scaling * 100) / 100);
+          }
+          if (percentFlags.living) {
+            percentValues.living = Math.max(0, Math.round(percentValues.living * scaling * 100) / 100);
+          }
+          unspecifiedKeys.forEach((key) => {
+            percentValues[key] = Math.max(0, Math.round(percentValues[key] * scaling * 100) / 100);
+          });
+        }
+
+        merged.savingsPercentage = percentValues.savings;
+        merged.investmentsPercentage = percentValues.investments;
+        merged.livingExpensesPercentage = percentValues.living;
+      }
+
+      const normalized = normalizePercentages({
+        ...merged,
+        savingsPercentage: percentValues.savings,
+        investmentsPercentage: percentValues.investments,
+        livingExpensesPercentage: percentValues.living,
+      });
+
+      const monthlyUpdated = updates.monthlyIncome !== undefined;
+      const yearlyUpdated = updates.yearlyIncome !== undefined;
+
+      if (monthlyUpdated && !yearlyUpdated) {
+        normalized.yearlyIncome = Math.round(normalized.monthlyIncome * 12 * 100) / 100;
+      } else if (!monthlyUpdated && yearlyUpdated) {
+        normalized.monthlyIncome = Math.round((normalized.yearlyIncome / 12) * 100) / 100;
+      }
+
+      nextPlan = normalized;
+
+      return {
+        ...prev,
+        financialPlan: normalized,
+        ninetyDayPlan: prev.goals.length > 0 ? buildNinetyDayPlan(normalized, prev.goals) : prev.ninetyDayPlan,
+        lastUpdated: new Date().toISOString(),
+      };
+    });
+
+    return nextPlan;
   };
 
   const setNinetyDayPlan = (plan: NinetyDayPlan) => {
@@ -313,6 +567,7 @@ export const FinancialDataProvider = ({ children }: { children: ReactNode }) => 
         setTransactions,
         setFinancialPlan,
         setNinetyDayPlan,
+        adjustFinancialPlan,
         updateData,
         clearAllData,
         getFinancialSummary,

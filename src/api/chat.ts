@@ -10,7 +10,30 @@ export type ChatRequest = {
   context?: {
     accountSummary?: string;
     goals?: string;
+    summary?: string;
+    planSnapshot?: {
+      createdDate: string;
+      totals: {
+        totalIncome: number;
+        totalSavings: number;
+        totalInvestments: number;
+        totalLivingExpenses: number;
+        totalGoals: number;
+      };
+      months: Array<{
+        month: number;
+        name: string;
+        totals: {
+          income: number;
+          savings: number;
+          investments: number;
+          livingExpenses: number;
+          goals: number;
+        };
+      }>;
+    };
   };
+  systemPrompt?: string;
 };
 
 export type ChatResponse = {

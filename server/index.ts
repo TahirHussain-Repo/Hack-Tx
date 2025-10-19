@@ -115,6 +115,30 @@ const billSchema = z.object({
   payment_amount: z.number().nonnegative(),
 });
 
+const planSnapshotSchema = z.object({
+  createdDate: z.string(),
+  totals: z.object({
+    totalIncome: z.number(),
+    totalSavings: z.number(),
+    totalInvestments: z.number(),
+    totalLivingExpenses: z.number(),
+    totalGoals: z.number(),
+  }),
+  months: z.array(
+    z.object({
+      month: z.number(),
+      name: z.string(),
+      totals: z.object({
+        income: z.number(),
+        savings: z.number(),
+        investments: z.number(),
+        livingExpenses: z.number(),
+        goals: z.number(),
+      }),
+    }),
+  ),
+});
+
 const chatSchema = z.object({
   messages: z.array(
     z.object({
@@ -126,8 +150,11 @@ const chatSchema = z.object({
     .object({
       accountSummary: z.string().optional(),
       goals: z.string().optional(),
+      summary: z.string().optional(),
+      planSnapshot: planSnapshotSchema.optional(),
     })
     .optional(),
+  systemPrompt: z.string().optional(),
 });
 
 function asyncHandler<Req extends Request, Res extends Response>(fn: (req: Req, res: Res) => Promise<unknown>) {
@@ -148,19 +175,47 @@ app.get(
   }),
 );
 
-async function callGemini(messages: { role: string; content: string }[], context?: { accountSummary?: string; goals?: string }) {
+interface ChatContext {
+  accountSummary?: string;
+  goals?: string;
+  summary?: string;
+  planSnapshot?: z.infer<typeof planSnapshotSchema>;
+}
+
+function formatPlanSnapshot(snapshot: ChatContext["planSnapshot"] | undefined) {
+  if (!snapshot) return "";
+
+  const summaryLines = [
+    `Plan created ${new Date(snapshot.createdDate).toLocaleDateString()}`,
+    `Totals — Income: $${snapshot.totals.totalIncome.toLocaleString()}, Savings: $${snapshot.totals.totalSavings.toLocaleString()}, Investments: $${snapshot.totals.totalInvestments.toLocaleString()}, Living: $${snapshot.totals.totalLivingExpenses.toLocaleString()}, Goals: $${snapshot.totals.totalGoals.toLocaleString()}`,
+  ];
+
+  snapshot.months.forEach((month) => {
+    summaryLines.push(
+      `${month.name}: income $${month.totals.income.toLocaleString()}, savings $${month.totals.savings.toLocaleString()}, investments $${month.totals.investments.toLocaleString()}, living $${month.totals.livingExpenses.toLocaleString()}, goals $${month.totals.goals.toLocaleString()}`,
+    );
+  });
+
+  return summaryLines.join("\n");
+}
+
+async function callGemini(
+  messages: { role: string; content: string }[],
+  context?: ChatContext,
+  systemPrompt?: string,
+) {
   if (!GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not set");
   }
 
-  const systemPrompt =
+  const prompt = systemPrompt ??
     "You are MoneyTalks, a helpful personal finance AI that gives concise, actionable advice. " +
-    "Answer using clear paragraphs, cite figures in USD, and reference spending trends only if mentioned.";
+      "Answer using clear paragraphs, cite figures in USD, and reference spending trends only if mentioned.";
 
   const contents = [
     {
       role: "user",
-      parts: [{ text: systemPrompt }],
+      parts: [{ text: prompt }],
     },
     ...messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
   ];
@@ -170,6 +225,12 @@ async function callGemini(messages: { role: string; content: string }[], context
   }
   if (context?.goals) {
     contents.push({ role: "user", parts: [{ text: `Goals: ${context.goals}` }] });
+  }
+  if (context?.summary) {
+    contents.push({ role: "user", parts: [{ text: `Financial summary: ${context.summary}` }] });
+  }
+  if (context?.planSnapshot) {
+    contents.push({ role: "user", parts: [{ text: `90-day plan details:\n${formatPlanSnapshot(context.planSnapshot)}` }] });
   }
 
   type GeminiResponse = {
@@ -308,9 +369,9 @@ app.post(
       return;
     }
 
-    const { messages, context } = parsed.data;
+    const { messages, context, systemPrompt: system } = parsed.data;
     try {
-      const text = await callGemini(messages, context);
+      const text = await callGemini(messages, context, system);
       res.json({ message: text });
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
