@@ -8,11 +8,10 @@ const navigation = [
   { name: "Chat", href: "/chat", icon: MessageSquare },
   { name: "Goals", href: "/goals", icon: Target },
   { name: "Subscriptions", href: "/subscriptions", icon: CreditCard },
-  { name: "Insights", href: "/insights", icon: TrendingUp },
+  { name: "Plan", href: "/plan", icon: TrendingUp },
   { name: "Autopilot", href: "/autopilot", icon: Zap },
   { name: "Emergency", href: "/emergency", icon: AlertCircle },
   { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Nessie Demo", href: "/nessie", icon: Zap },
 ];
 
 export const Sidebar = () => {

@@ -23,8 +23,9 @@ interface Goal {
 const Onboarding3 = () => {
   const navigate = useNavigate();
   const { completeOnboarding } = useOnboarding();
-  const { setGoals: saveGoals, setFinancialPlan } = useFinancialData();
+  const { setGoals: saveGoals, setFinancialPlan, setNinetyDayPlan } = useFinancialData();
   const [loading, setLoading] = useState(true);
+  const [buildingPlan, setBuildingPlan] = useState(false);
   const [savings, setSavings] = useState(20);
   const [investments, setInvestments] = useState(10);
   const [monthlyIncome, setMonthlyIncome] = useState(8334);
@@ -80,7 +81,12 @@ const Onboarding3 = () => {
   const investmentsAmount = Math.round((monthlyIncome * investments) / 100);
   const livingExpensesAmount = Math.round((monthlyIncome * livingExpenses) / 100);
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    setBuildingPlan(true);
+
+    // Simulate processing time
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     // Save goals and financial plan to context
     saveGoals(goals);
     setFinancialPlan({
@@ -90,12 +96,94 @@ const Onboarding3 = () => {
       monthlyIncome,
       yearlyIncome: monthlyIncome * 12,
     });
+
+    // Generate 90-day plan
+    const perPaycheck = monthlyIncome / 2;
+    const savingsPerPaycheck = Math.round((perPaycheck * savings) / 100);
+    const investmentsPerPaycheck = Math.round((perPaycheck * investments) / 100);
+    const livingExpensesPerPaycheck = Math.round((perPaycheck * livingExpenses) / 100);
+
+    const today = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    const months = [];
+    let overallSavings = 0;
+    let overallInvestments = 0;
+    let overallLivingExpenses = 0;
+    let overallGoals = 0;
+    let paycheckCounter = 1;
+
+    for (let monthIdx = 0; monthIdx < 3; monthIdx++) {
+      const monthDate = new Date(today);
+      monthDate.setMonth(today.getMonth() + monthIdx);
+      const monthName = monthNames[monthDate.getMonth()];
+
+      const paychecks = [];
+      
+      // Two paychecks per month (1st and 15th)
+      for (let paycheckIdx = 0; paycheckIdx < 2; paycheckIdx++) {
+        const paycheckDate = new Date(monthDate);
+        paycheckDate.setDate(paycheckIdx === 0 ? 1 : 15);
+        
+        // Calculate goal allocations for this paycheck
+        const goalAllocations = goals.map(goal => ({
+          goalId: goal.id,
+          goalName: goal.name,
+          amount: Math.round(goal.monthlyAllocation / 2)
+        }));
+
+        const totalGoalAllocation = goalAllocations.reduce((sum, g) => sum + g.amount, 0);
+
+        paychecks.push({
+          paycheckNumber: paycheckCounter++,
+          date: paycheckDate.toISOString(),
+          income: perPaycheck,
+          savings: savingsPerPaycheck,
+          investments: investmentsPerPaycheck,
+          livingExpenses: livingExpensesPerPaycheck,
+          goalAllocations
+        });
+
+        overallSavings += savingsPerPaycheck;
+        overallInvestments += investmentsPerPaycheck;
+        overallLivingExpenses += livingExpensesPerPaycheck;
+        overallGoals += totalGoalAllocation;
+      }
+
+      months.push({
+        month: monthIdx + 1,
+        monthName,
+        totalIncome: monthlyIncome,
+        paychecks,
+        monthTotals: {
+          income: monthlyIncome,
+          savings: savingsPerPaycheck * 2,
+          investments: investmentsPerPaycheck * 2,
+          livingExpenses: livingExpensesPerPaycheck * 2,
+          goals: goals.reduce((sum, goal) => sum + goal.monthlyAllocation, 0)
+        }
+      });
+    }
+
+    const ninetyDayPlan = {
+      createdDate: new Date().toISOString(),
+      months,
+      overallTotals: {
+        totalIncome: monthlyIncome * 3,
+        totalSavings: overallSavings,
+        totalInvestments: overallInvestments,
+        totalLivingExpenses: overallLivingExpenses,
+        totalGoals: overallGoals
+      }
+    };
+
+    setNinetyDayPlan(ninetyDayPlan);
     
     // Mark onboarding as complete
     completeOnboarding();
     
-    // Navigate to dashboard
-    navigate("/");
+    // Navigate to plan page
+    navigate("/plan");
   };
 
   const formatCurrency = (amount: number) => {
@@ -155,7 +243,19 @@ const Onboarding3 = () => {
       <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-card">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin" />
-          <p className="text-lg text-muted-foreground">Building your plan...</p>
+          <p className="text-lg text-muted-foreground">Loading your financial data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (buildingPlan) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-card">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-16 h-16 text-primary mx-auto animate-spin" />
+          <h2 className="text-2xl font-bold text-foreground">Building your 90-day plan...</h2>
+          <p className="text-lg text-muted-foreground">Calculating allocations and goal progress</p>
         </div>
       </div>
     );

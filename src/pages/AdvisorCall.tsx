@@ -7,6 +7,7 @@ import { MicControl } from "@/components/MicControl";
 import { SessionControls } from "@/components/SessionControls";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, DollarSign, Target, Clock } from "lucide-react";
+import { useFinancialData } from "@/contexts/FinancialDataContext";
 
 type SessionState = "idle" | "active" | "paused";
 type MicState = "idle" | "listening" | "processing";
@@ -19,9 +20,27 @@ interface TranscriptMessage {
 }
 
 export default function AdvisorCall() {
+  const { data } = useFinancialData();
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [micState, setMicState] = useState<MicState>("idle");
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
+
+  // Calculate real data from context
+  const totalSpending = data.bills.reduce((sum, bill) => sum + bill.payment_amount, 0);
+  const savingsRate = data.financialPlan?.savingsPercentage || 0;
+  const activeGoals = data.goals.length;
+  const nearestGoal = data.goals.length > 0 
+    ? data.goals.sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime())[0]
+    : null;
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const handleStartSession = () => {
     setSessionState("active");
@@ -190,11 +209,15 @@ export default function AdvisorCall() {
                 <DollarSign className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Monthly Spending</p>
-                <p className="text-xl font-bold text-foreground">$3,247</p>
+                <p className="text-sm text-muted-foreground">Monthly Bills</p>
+                <p className="text-xl font-bold text-foreground">{formatCurrency(totalSpending)}</p>
               </div>
             </div>
-            <p className="text-xs text-primary">↓ 12% from last month</p>
+            {totalSpending > 0 && data.financialPlan && (
+              <p className="text-xs text-muted-foreground">
+                {((totalSpending / data.financialPlan.monthlyIncome) * 100).toFixed(1)}% of monthly income
+              </p>
+            )}
           </GlassCard>
 
           <GlassCard hover>
@@ -204,10 +227,14 @@ export default function AdvisorCall() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Savings Rate</p>
-                <p className="text-xl font-bold text-foreground">32%</p>
+                <p className="text-xl font-bold text-foreground">{savingsRate}%</p>
               </div>
             </div>
-            <p className="text-xs text-primary">↑ 5% from last month</p>
+            {data.financialPlan && (
+              <p className="text-xs text-primary">
+                {formatCurrency(Math.round((data.financialPlan.monthlyIncome * savingsRate) / 100))}/month
+              </p>
+            )}
           </GlassCard>
 
           <GlassCard hover>
@@ -217,10 +244,14 @@ export default function AdvisorCall() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Active Goals</p>
-                <p className="text-xl font-bold text-foreground">3</p>
+                <p className="text-xl font-bold text-foreground">{activeGoals}</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Paris trip is 68% complete</p>
+            {nearestGoal && (
+              <p className="text-xs text-muted-foreground">
+                Next: {nearestGoal.name} by {new Date(nearestGoal.targetDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              </p>
+            )}
           </GlassCard>
         </div>
       </div>

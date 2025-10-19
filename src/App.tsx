@@ -14,7 +14,7 @@ import AdvisorCall from "./pages/AdvisorCall";
 import Chat from "./pages/Chat";
 import Goals from "./pages/Goals";
 import Subscriptions from "./pages/Subscriptions";
-import Insights from "./pages/Insights";
+import Plan from "./pages/Plan";
 import Autopilot from "./pages/Autopilot";
 import Emergency from "./pages/Emergency";
 import Settings from "./pages/Settings";
@@ -79,7 +79,7 @@ const AppContent = () => {
               <Route path="/chat" element={<Chat />} />
               <Route path="/goals" element={<Goals />} />
               <Route path="/subscriptions" element={<Subscriptions />} />
-              <Route path="/insights" element={<Insights />} />
+              <Route path="/plan" element={<Plan />} />
               <Route path="/autopilot" element={<Autopilot />} />
               <Route path="/emergency" element={<Emergency />} />
               <Route path="/settings" element={<Settings />} />

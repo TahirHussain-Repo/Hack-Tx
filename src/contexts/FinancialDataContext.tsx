@@ -47,12 +47,45 @@ export interface FinancialPlan {
   yearlyIncome: number;
 }
 
+export interface NinetyDayPlan {
+  createdDate: string;
+  months: Array<{
+    month: number;
+    monthName: string;
+    totalIncome: number;
+    paychecks: Array<{
+      paycheckNumber: number;
+      date: string;
+      income: number;
+      savings: number;
+      investments: number;
+      livingExpenses: number;
+      goalAllocations: Array<{ goalId: string; goalName: string; amount: number }>;
+    }>;
+    monthTotals: {
+      income: number;
+      savings: number;
+      investments: number;
+      livingExpenses: number;
+      goals: number;
+    };
+  }>;
+  overallTotals: {
+    totalIncome: number;
+    totalSavings: number;
+    totalInvestments: number;
+    totalLivingExpenses: number;
+    totalGoals: number;
+  };
+}
+
 interface FinancialData {
   goals: Goal[];
   accounts: Account[];
   bills: Bill[];
   transactions: Transaction[];
   financialPlan: FinancialPlan | null;
+  ninetyDayPlan: NinetyDayPlan | null;
   lastUpdated: string | null;
 }
 
@@ -66,6 +99,7 @@ interface FinancialDataContextType {
   setBills: (bills: Bill[]) => void;
   setTransactions: (transactions: Transaction[]) => void;
   setFinancialPlan: (plan: FinancialPlan) => void;
+  setNinetyDayPlan: (plan: NinetyDayPlan) => void;
   updateData: (updates: Partial<FinancialData>) => void;
   clearAllData: () => void;
   getFinancialSummary: () => string;
@@ -77,6 +111,7 @@ const defaultData: FinancialData = {
   bills: [],
   transactions: [],
   financialPlan: null,
+  ninetyDayPlan: null,
   lastUpdated: null,
 };
 
@@ -166,6 +201,14 @@ export const FinancialDataProvider = ({ children }: { children: ReactNode }) => 
     }));
   };
 
+  const setNinetyDayPlan = (plan: NinetyDayPlan) => {
+    setData((prev) => ({
+      ...prev,
+      ninetyDayPlan: plan,
+      lastUpdated: new Date().toISOString(),
+    }));
+  };
+
   const updateData = (updates: Partial<FinancialData>) => {
     setData((prev) => ({
       ...prev,
@@ -181,7 +224,7 @@ export const FinancialDataProvider = ({ children }: { children: ReactNode }) => 
 
   // Generate a text summary that AI can use
   const getFinancialSummary = (): string => {
-    const { goals, accounts, bills, transactions, financialPlan } = data;
+    const { goals, accounts, bills, transactions, financialPlan, ninetyDayPlan } = data;
 
     let summary = "Financial Overview:\n\n";
 
@@ -238,6 +281,20 @@ export const FinancialDataProvider = ({ children }: { children: ReactNode }) => 
       recent.forEach((txn) => {
         summary += `- ${new Date(txn.transaction_date).toLocaleDateString()}: ${txn.description || txn.type} - $${txn.amount.toLocaleString()}\n`;
       });
+      summary += "\n";
+    }
+
+    // 90-Day Plan
+    if (ninetyDayPlan) {
+      summary += `90-Day Financial Plan:\n`;
+      summary += `Created: ${new Date(ninetyDayPlan.createdDate).toLocaleDateString()}\n`;
+      summary += `Total Income (90 days): $${ninetyDayPlan.overallTotals.totalIncome.toLocaleString()}\n`;
+      summary += `Total Savings: $${ninetyDayPlan.overallTotals.totalSavings.toLocaleString()}\n`;
+      summary += `Total Investments: $${ninetyDayPlan.overallTotals.totalInvestments.toLocaleString()}\n`;
+      summary += `Total Living Expenses: $${ninetyDayPlan.overallTotals.totalLivingExpenses.toLocaleString()}\n`;
+      if (ninetyDayPlan.overallTotals.totalGoals > 0) {
+        summary += `Total Goal Allocations: $${ninetyDayPlan.overallTotals.totalGoals.toLocaleString()}\n`;
+      }
     }
 
     return summary;
@@ -255,6 +312,7 @@ export const FinancialDataProvider = ({ children }: { children: ReactNode }) => 
         setBills,
         setTransactions,
         setFinancialPlan,
+        setNinetyDayPlan,
         updateData,
         clearAllData,
         getFinancialSummary,
