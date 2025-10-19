@@ -1,70 +1,109 @@
-# Hack Tx
+# MoneyTalks (Hack Tx 2025)
 
-Hack Tx 2025 Project Hub
+Voice-first AI financial advisor with live speech recognition, Gemini-powered answers, optional TTS (ElevenLabs), and Nessie demo data.
 
-## Nessie Setup
+## Prerequisites
 
-### Backend
+- Node 18+
+- Python 3.10+
+- Chrome/Edge (for Web Speech API)
+
+## Frontend (Vite)
 
 ```
-cd server
-cp .env.example .env        # paste NESSIE_KEY here
 npm i
-npm run dev                 # starts on http://localhost:5179
+npm run dev                 # http://localhost:5173
 ```
 
-### Frontend
+Key routes:
+- `/` Advisor: voice-to-text, send to AI, full transcript, TTS reply
+- `/voice-test` Voice test: minimal mic test (live + final transcript)
 
+## Backend (Flask)
+
+Environment:
 ```
-# from repo root
-npm i                       # if needed
-npm run dev                 # ensure VITE_API_BASE points to the proxy
-```
-
-## Gemini Chat Advisor
-
-### Configure API keys
-
-1. Get a Google AI Studio API key (Gemini).
-2. In `server/`, copy the example file and add your keys:
-
-```
-cd server
-cp .env.example .env
-# open server/.env and set
-# NESSIE_KEY=...
+cd backend
+cp example.env .env
+# then set in .env:
 # GEMINI_API_KEY=...
-# (optional) GEMINI_MODEL=gemini-1.5-flash
+# ELEVENLABS_API_KEY=...        # needed for TTS
+# NESSIE_API_KEY=...            # optional (spending summary)
 ```
 
-### Run servers
-
+Install & run:
 ```
-cd server
-npm i
-npm run dev                 # starts proxy on http://localhost:5179
+python3 -m pip install -r requirements.txt
+python3 server.py              # http://localhost:3001
+```
 
+If you plan to use Computer Use features later:
+```
+python3 -m pip install --upgrade google-genai playwright
+python3 -m playwright install chromium
+```
+
+Troubleshooting google namespace pollution:
+```
+python3 -m pip uninstall -y google
+python3 -m pip install --upgrade google-generativeai google-genai
+```
+
+## Wiring (how the app works)
+
+- Speech recognition: `src/hooks/useSpeechRecognition.ts` wraps the Web Speech API for interim/final transcripts.
+- Advisor page (`src/pages/AdvisorCall.tsx`):
+  - Tap mic → live interim text appears → stop to finalize
+  - Click "Send to Advisor" → creates session if needed → POSTs to backend `/api/advisor/chat`
+  - AI response is appended to the transcript and spoken (TTS) if key is present
+
+## Backend endpoints
+
+- `POST /api/advisor/start-session` → `{ session_id, welcome_message, financial_summary? }`
+- `POST /api/advisor/chat`          → `{ response, timestamp }`
+- `POST /api/advisor/synthesize-speech` → audio blob (ElevenLabs)
+- `POST /api/advisor/generate-goals`    → `{ goals, based_on }`
+- `POST /api/advisor/end-session`       → `{ summary, ended_at }`
+- `GET  /health`                        → basic status flags
+
+## Run the whole stack (dev)
+
+1) Backend:
+```
+cd backend
+python3 -m pip install -r requirements.txt
+python3 server.py
+```
+
+2) Frontend:
+```
 # new terminal at repo root
-npm run dev                 # Vite UI (defaults to http://localhost:8080)
+npm i
+npm run dev
 ```
 
-Ensure `CORS_ORIGIN` in `server/.env` includes `http://localhost:8080` (and 5173 if you switch ports).
+Open `http://localhost:5173`.
 
-### Use Chat Advisor
+## Usage (step-by-step)
 
-- Visit the **Chat Advisor** tab.
-- Start a conversation; messages are sent to `/api/chat/completions` and answered by Gemini.
-- If you see “Gemini is not configured”, double-check `GEMINI_API_KEY` and restart the proxy.
+1. Open the Advisor tab (`/`).
+2. If prompted, click "Request Microphone Access" and Allow.
+3. Tap the mic, speak your question, stop.
+4. Click "Send to Advisor" to send recognized text to the backend.
+5. See the AI reply in the transcript; hear it via TTS if configured.
 
-### Notes
+## Common issues
 
-- API calls stay server-side; the browser never sees your API keys.
-- Customize prompts and default summaries in `server/index.ts` near the `/api/chat/completions` route.
+- Mic blocked / NotAllowedError: Click the lock icon → Microphone → Allow → refresh.
+- No speech recognition: Use Chrome/Edge; Safari is not supported.
+- Backend import error: Uninstall `google` package; install `google-genai` and `google-generativeai`.
+- TTS silent: Verify `ELEVENLABS_API_KEY` and that the backend logs show 200 responses.
 
-### How to test
+## Repo layout
 
-- Visit the Nessie demo page (sidebar → "Nessie Demo").
-- Select an account from the rendered buttons to load its activity.
-- Create a deposit and a purchase; confirm they show up after submission.
-- Create a bill and verify it persists.
-- Use the demo controls to hit public endpoints (branches, ATMs, merchants) and confirm data loads.
+- `src/pages/AdvisorCall.tsx`  Simplified advisor with voice-to-text → AI → TTS
+- `src/pages/VoiceTest.tsx`    Minimal voice test page
+- `src/hooks/useSpeechRecognition.ts`  Web Speech wrapper
+- `src/services/advisorApiService.ts`  Frontend→Flask API client
+- `backend/server.py`          Flask API (Gemini, ElevenLabs, Nessie integration)
+
