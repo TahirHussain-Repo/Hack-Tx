@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import Onboarding1 from "./pages/Onboarding1";
 import Onboarding2 from "./pages/Onboarding2";
 import Onboarding3 from "./pages/Onboarding3";
+import VoiceTest from "./pages/VoiceTest";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const AppContent = () => {
               <Route path="/autopilot" element={<Autopilot />} />
               <Route path="/emergency" element={<Emergency />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/voice-test" element={<VoiceTest />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

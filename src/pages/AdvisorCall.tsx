@@ -1,267 +1,206 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { GlassCard } from "@/components/GlassCard";
 import { VoiceWaveform } from "@/components/VoiceWaveform";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { MicControl } from "@/components/MicControl";
-import { SessionControls } from "@/components/SessionControls";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, DollarSign, Target, Clock } from "lucide-react";
-import { useFinancialData } from "@/contexts/FinancialDataContext";
-
-type SessionState = "idle" | "active" | "paused";
-type MicState = "idle" | "listening" | "processing";
-
-interface TranscriptMessage {
-  id: string;
-  role: "user" | "advisor";
-  content: string;
-  timestamp: Date;
-}
+import { MicrophonePermission } from "@/components/MicrophonePermission";
+import { Button } from "@/components/ui/button";
+import { advisorApi } from "@/services/advisorApiService";
+import { audioService } from "@/services/audioService";
+import { AlertCircle } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdvisorCall() {
-  const { data } = useFinancialData();
-  const [sessionState, setSessionState] = useState<SessionState>("idle");
-  const [micState, setMicState] = useState<MicState>("idle");
-  const [messages, setMessages] = useState<TranscriptMessage[]>([]);
+  const { toast } = useToast();
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Array<{ id: string; role: "user" | "advisor"; content: string; timestamp: Date }>>([]);
 
-  // Calculate real data from context
-  const totalSpending = data.bills.reduce((sum, bill) => sum + bill.payment_amount, 0);
-  const savingsRate = data.financialPlan?.savingsPercentage || 0;
-  const activeGoals = data.goals.length;
-  const nearestGoal = data.goals.length > 0 
-    ? data.goals.sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime())[0]
-    : null;
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    error,
+    isSupported,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition({
+    continuous: false,
+    interimResults: true,
+    onError: (err) => {
+      toast({ title: "Voice Error", description: err, variant: "destructive" });
+    },
+  });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+  useEffect(() => {
+    let status: PermissionStatus | null = null;
+    const handleChange = () => {
+      if (status) setMicPermissionGranted(status.state === 'granted');
+    };
+    const checkPermission = async () => {
+      try {
+        status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        setMicPermissionGranted(status.state === 'granted');
+        status.addEventListener('change', handleChange);
+      } catch {
+        setMicPermissionGranted(false);
+      }
+    };
+    checkPermission();
+    return () => {
+      if (status) {
+        try {
+          status.removeEventListener('change', handleChange);
+        } catch (cleanupError) {
+          // ignore cleanup errors
+        }
+      }
+    };
+  }, []);
 
-  const handleStartSession = () => {
-    setSessionState("active");
-    // Add welcome message
-    setMessages([
-      {
-        id: "1",
-        role: "advisor",
-        content: "Hello! I'm your MoneyTalks advisor. I've reviewed your recent financial activity. How can I help you today?",
-        timestamp: new Date(),
-      },
-    ]);
-  };
-
-  const handleEndSession = () => {
-    setSessionState("idle");
-    setMicState("idle");
-    setMessages([]);
-  };
-
-  const handleMicToggle = () => {
-    if (sessionState !== "active") return;
-
-    if (micState === "idle") {
-      setMicState("listening");
-      
-      // Simulate voice detection after 2 seconds
-      setTimeout(() => {
-        setMicState("processing");
-        
-        // Simulate processing and response
-        setTimeout(() => {
-          const userMessage: TranscriptMessage = {
-            id: Date.now().toString(),
-            role: "user",
-            content: "How am I doing with my budget this month?",
-            timestamp: new Date(),
-          };
-          
-          setMessages((prev) => [...prev, userMessage]);
-          setMicState("idle");
-          
-          // Add advisor response
-          setTimeout(() => {
-            const advisorMessage: TranscriptMessage = {
-              id: (Date.now() + 1).toString(),
-              role: "advisor",
-              content: "You're doing great! You've spent $3,247 of your $3,750 budget, which is 87% utilization. Your spending is down 12% from last month, and your savings rate increased to 32%.",
-              timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, advisorMessage]);
-          }, 1000);
-        }, 1500);
-      }, 2000);
-    } else if (micState === "listening") {
-      setMicState("idle");
+  const toggleMic = async () => {
+    if (!isSupported) {
+      toast({ title: "Not Supported", description: "Use Chrome or Edge.", variant: "destructive" });
+      return;
+    }
+    if (!micPermissionGranted) {
+      toast({ title: "Permission Required", description: "Grant microphone access first.", variant: "destructive" });
+        return;
+      }
+    if (isListening) {
+      stopListening();
+        return;
+      }
+      try {
+        resetTranscript();
+        await startListening();
+  } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      toast({ title: "Microphone Error", description: message, variant: "destructive" });
     }
   };
 
-  const handleGenerateGoals = () => {
-    // Mock goal generation
-    setMessages([
-      {
-        id: "goal-1",
-        role: "advisor",
-        content: "Based on your spending patterns, I recommend three goals: Build a 6-month emergency fund ($15,000), Save for your Paris trip ($5,000 by June 2026), and Invest 15% of income for retirement.",
-        timestamp: new Date(),
-      },
-    ]);
+  const sendToAdvisor = async () => {
+    const text = (transcript || "").trim();
+    if (!text) return;
+    // Append user message to transcript
+    const userMsg = { id: Date.now().toString(), role: "user" as const, content: text, timestamp: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
+    try {
+      let sid = sessionId;
+      if (!sid) {
+        const session = await advisorApi.startSession();
+        sid = session.session_id;
+        setSessionId(sid);
+      }
+      const res = await advisorApi.sendMessage(sid!, text);
+      const aiMsg = { id: (Date.now() + 1).toString(), role: "advisor" as const, content: res.response, timestamp: new Date(res.timestamp) };
+      setMessages((prev) => [...prev, aiMsg]);
+      // Clear the text input transcript after send
+      resetTranscript();
+      try {
+        const audioBlob = await advisorApi.synthesizeSpeech(res.response);
+        await audioService.play(audioBlob);
+      } catch (e: unknown) {
+        // TTS failure shouldn't block UI
+        console.error("TTS error", e);
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      toast({ title: "Advisor Error", description: message, variant: "destructive" });
+    }
   };
 
   return (
     <div className="animate-fade-in-up max-w-7xl mx-auto">
       <Header
-        title="Advisor Call"
+        title="Advisor"
         subtitle="Voice-first financial guidance powered by AI"
       />
 
-      {/* Session Status Bar */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Badge
-            variant={sessionState === "active" ? "default" : "secondary"}
-            className={
-              sessionState === "active"
-                ? "bg-primary/20 text-primary border-primary/30"
-                : "bg-muted/20 text-muted-foreground border-muted/30"
-            }
-          >
-            {sessionState === "active" ? "Session Active" : "Ready to Start"}
-          </Badge>
-          {sessionState === "active" && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Session started</span>
+      {!isSupported && (
+        <GlassCard className="mb-6 bg-accent/5 border-accent/20">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-accent mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-accent mb-1">Voice Input Not Supported</h3>
+              <p className="text-sm text-muted-foreground">Use Chrome or Edge for the full experience.</p>
             </div>
-          )}
-        </div>
+          </div>
+        </GlassCard>
+      )}
 
-        {sessionState === "active" && (
-          <MicControl
-            state={micState}
-            onToggle={handleMicToggle}
-            size="default"
-          />
-        )}
-      </div>
+      {isSupported && !micPermissionGranted && (
+        <div className="mb-6">
+          <MicrophonePermission onRequestPermission={async () => {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              stream.getTracks().forEach(t => t.stop());
+              setMicPermissionGranted(true);
+            } catch (e: unknown) {
+              const message = e instanceof Error ? e.message : String(e);
+              toast({ title: "Permission Error", description: message, variant: "destructive" });
+            }
+          }} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Main Voice Interface */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Waveform Visualization */}
-          <GlassCard className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-            <div className="relative z-10">
-              <div className="text-center mb-6">
+          <GlassCard className="relative overflow-hidden p-6">
+            <div className="text-center mb-4">
                 <h3 className="text-lg font-semibold text-foreground mb-1">
-                  {sessionState === "active"
-                    ? micState === "listening"
-                      ? "Listening..."
-                      : micState === "processing"
-                      ? "Processing..."
-                      : "Speak when ready"
-                    : "Start a Session"}
+                {isListening ? "Listening..." : "Tap the mic to speak"}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {sessionState === "active"
-                    ? "Click the mic to speak or ask questions"
-                    : "Begin your personalized financial consultation"}
+                Your speech will appear as text below
                 </p>
               </div>
 
-              <VoiceWaveform
-                isActive={sessionState === "active" && micState === "listening"}
-                bars={40}
-              />
-
-              {sessionState === "idle" && (
-                <div className="flex justify-center mt-6">
-                  <MicControl
-                    state="idle"
-                    onToggle={() => {}}
-                    size="lg"
-                  />
+              {interimTranscript && (
+                <div className="mb-4 text-center">
+                <p className="text-sm text-primary/70 italic">"{interimTranscript}"</p>
                 </div>
               )}
+
+            <div className="flex justify-center mb-6">
+                  <MicControl
+                state={isListening ? "listening" : "idle"}
+                onToggle={toggleMic}
+                    size="lg"
+                  />
             </div>
+
+            <VoiceWaveform isActive={isListening} bars={40} />
           </GlassCard>
 
-          {/* Session Controls */}
-          <div className="flex justify-center">
-            <SessionControls
-              state={sessionState}
-              onStart={handleStartSession}
-              onEnd={handleEndSession}
-              onGenerateGoals={sessionState === "idle" ? handleGenerateGoals : undefined}
+          <GlassCard>
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
+              <h3 className="text-sm font-semibold text-foreground">Call Transcript</h3>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setMessages([])} className="gap-2">Clear</Button>
+                <Button onClick={sendToAdvisor} disabled={!transcript.trim()} className="gap-2">Send to Advisor</Button>
+              </div>
+            </div>
+            <TranscriptPanel
+              messages={messages}
+              isLive={isListening}
+              liveUserMessage={interimTranscript}
+              className="p-0"
             />
-          </div>
-        </div>
-
-        {/* Quick Insights */}
-        <div className="space-y-4">
-          <GlassCard hover>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <DollarSign className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Monthly Bills</p>
-                <p className="text-xl font-bold text-foreground">{formatCurrency(totalSpending)}</p>
-              </div>
-            </div>
-            {totalSpending > 0 && data.financialPlan && (
-              <p className="text-xs text-muted-foreground">
-                {((totalSpending / data.financialPlan.monthlyIncome) * 100).toFixed(1)}% of monthly income
-              </p>
-            )}
           </GlassCard>
 
-          <GlassCard hover>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Savings Rate</p>
-                <p className="text-xl font-bold text-foreground">{savingsRate}%</p>
-              </div>
-            </div>
-            {data.financialPlan && (
-              <p className="text-xs text-primary">
-                {formatCurrency(Math.round((data.financialPlan.monthlyIncome * savingsRate) / 100))}/month
-              </p>
-            )}
-          </GlassCard>
+          {/* error display remains in left column */}
 
-          <GlassCard hover>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-accent/20">
-                <Target className="h-5 w-5 text-accent" />
+          {error && (
+            <div className="text-sm text-red-400">{error}</div>
+          )}
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Goals</p>
-                <p className="text-xl font-bold text-foreground">{activeGoals}</p>
-              </div>
-            </div>
-            {nearestGoal && (
-              <p className="text-xs text-muted-foreground">
-                Next: {nearestGoal.name} by {new Date(nearestGoal.targetDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-              </p>
-            )}
-          </GlassCard>
-        </div>
+        {/* Right column currently unused */}
       </div>
-
-      {/* Live Transcript */}
-      <TranscriptPanel
-        messages={messages}
-        isLive={sessionState === "active"}
-        className="p-6"
-      />
     </div>
   );
 }

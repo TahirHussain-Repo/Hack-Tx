@@ -45,8 +45,13 @@ NESSIE_API_KEY = os.getenv('NESSIE_API_KEY')
 PORT = int(os.getenv('PORT', 3001))
 
 # Initialize Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    # Use gemini-2.0-flash (fast and reliable)
+    model = genai.GenerativeModel('gemini-2.0-flash')
+else:
+    model = None
+    print("WARNING: No Gemini API key found!")
 
 # In-memory session storage (use Redis in production)
 sessions = {}
@@ -56,18 +61,40 @@ SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 900
 
 # Strict import for Computer Use (required)
-from google import genai as genai_client
-from google.genai import types
-from google.genai.types import Content, Part
-from playwright.sync_api import sync_playwright
+# Guard google-genai imports to avoid ImportError if namespace is polluted by 'google' pkg
+try:
+    from google import genai as genai_client
+    from google.genai import types
+    from google.genai.types import Content, Part
+    _genai2_available = True
+except Exception as _e:
+    genai_client = None  # type: ignore
+    types = None  # type: ignore
+    Content = None  # type: ignore
+    Part = None  # type: ignore
+    _genai2_available = False
+
+try:
+    from playwright.sync_api import sync_playwright
+    _playwright_available = True
+except Exception as _e:
+    sync_playwright = None  # type: ignore
+    _playwright_available = False
 
 # Validate Computer Use presence at startup
-if not hasattr(types, "ComputerUse") or not hasattr(types, "Environment"):
-    raise ImportError(
-        "google-genai does not include ComputerUse. Upgrade the SDK: "
-        "pip install --upgrade google-genai && python -m playwright install chromium"
-    )
-print("✓ Computer Use dependencies loaded successfully")
+computer_use_available: bool = False
+try:
+    if _genai2_available and types is not None and hasattr(types, "ComputerUse") and hasattr(types, "Environment") and _playwright_available:
+        computer_use_available = True
+        print("✓ Computer Use dependencies loaded successfully")
+    else:
+        raise ImportError(
+            "Computer Use prerequisites missing (google-genai types or Playwright). "
+            "Run: pip install --upgrade google-genai playwright && python -m playwright install chromium"
+        )
+except Exception as e:
+    computer_use_available = False
+    print(f"WARNING: Computer Use not available: {e}")
 
 # ============================================================================
 # NESSIE API HELPERS
@@ -163,30 +190,14 @@ Subscriptions:
 
 def get_system_prompt():
     """System prompt for the AI advisor"""
-    return """You are a professional financial advisor for MoneyTalks, a personal CFO platform.
-
-Your role:
-- Provide clear, actionable financial advice
-- Be conversational but professional
-- Keep responses concise (2-3 sentences for voice)
-- Use specific numbers from the user's data
-- Be encouraging but honest about financial situations
-
-Response style:
-- Natural, conversational tone suitable for voice
-- Avoid jargon unless necessary
-- Use "you" and "your" to personalize
-- Give specific recommendations, not generic advice
-
-DO NOT:
-- Use emojis or playful language
-- Make promises about returns or outcomes
-- Give investment advice beyond general guidance
-- Be overly formal or robotic
-"""
+    return """You are a financial advisor. Give concise, helpful advice in 2-3 sentences. Be professional and conversational."""
 
 def ask_gemini(user_message, conversation_history=None):
     """Send message to Gemini with context"""
+    if not model:
+        print("ERROR: Gemini model not initialized!")
+        return "I apologize, but I'm having trouble connecting to the AI service. Please check the server configuration."
+    
     try:
         # Build full context
         context = build_financial_context()
@@ -200,10 +211,20 @@ def ask_gemini(user_message, conversation_history=None):
             history_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history[-5:]])
             full_prompt = f"{system_prompt}\n\n{context}\n\nRecent Conversation:\n{history_text}\n\nUser: {user_message}\n\nAdvisor:"
         
+        print(f"\n=== GEMINI REQUEST ===")
+        print(f"User Message: {user_message}")
+        
         response = model.generate_content(full_prompt)
+        
+        print(f"Gemini Response: {response.text[:100]}...")
+        print(f"=== END REQUEST ===\n")
+        
         return response.text
     except Exception as e:
-        print(f"Gemini error: {e}")
+        print(f"\n!!! GEMINI ERROR !!!")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        print(f"!!! END ERROR !!!\n")
         return "I apologize, but I'm having trouble processing that right now. Could you try rephrasing your question?"
 
 # ============================================================================
@@ -639,21 +660,28 @@ def end_session():
     data = request.json
     session_id = data.get('session_id')
     
+    if not session_id:
+        return jsonify({"error": "No session_id provided"}), 400
+    
     if session_id in sessions:
         session = sessions[session_id]
         # Generate summary
         summary_prompt = "Provide a brief 2-sentence summary of our conversation and next steps."
         summary = ask_gemini(summary_prompt, session["conversation_history"])
         
-        # Clean up session
-        del sessions[session_id]
+        # Clean up session - use pop to avoid KeyError
+        sessions.pop(session_id, None)
         
         return jsonify({
             "summary": summary,
             "ended_at": datetime.now().isoformat()
         })
     
-    return jsonify({"error": "Session not found"}), 404
+    # Session already ended or doesn't exist - return success anyway
+    return jsonify({
+        "summary": "Session ended.",
+        "ended_at": datetime.now().isoformat()
+    })
 
 @app.route('/api/advisor/car-recommendations', methods=['POST', 'OPTIONS'])
 def get_car_recommendations():

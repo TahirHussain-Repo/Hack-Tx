@@ -13,16 +13,17 @@ interface TranscriptPanelProps {
   messages: TranscriptMessage[];
   isLive?: boolean;
   className?: string;
+  liveUserMessage?: string;
 }
 
-export const TranscriptPanel = ({ messages, isLive, className }: TranscriptPanelProps) => {
+export const TranscriptPanel = ({ messages, isLive, className, liveUserMessage }: TranscriptPanelProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, liveUserMessage]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("en-US", {
@@ -110,6 +111,23 @@ export const TranscriptPanel = ({ messages, isLive, className }: TranscriptPanel
             </div>
           </div>
         ))}
+
+        {/* Live user message (what they're currently saying) */}
+        {liveUserMessage && (
+          <div className="flex gap-3 flex-row-reverse animate-fade-in">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-white/[0.08]">
+              <User className="h-4 w-4 text-foreground" />
+            </div>
+            <div className="flex-1 max-w-[80%] flex flex-col items-end">
+              <div className="rounded-xl px-4 py-3 mb-1 bg-primary/10 border border-primary/20 border-dashed">
+                <p className="text-sm text-foreground/70 leading-relaxed italic">
+                  {liveUserMessage}
+                </p>
+              </div>
+              <span className="text-xs text-primary">Speaking...</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
